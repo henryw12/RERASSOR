@@ -3,11 +3,10 @@ import { WebSocketServer } from 'ws';
 const PORT = process.env.PORT || 10000;
 const wss = new WebSocketServer({ port: PORT });
 
-console.log(`Full Rover Server started on port ${PORT}`);
+console.log(`Rover Server started on port ${PORT}`);
 
 let connectedClients = [];
 
-// This function sends the full client list to all connected browsers
 function broadcastClientList() {
     const message = JSON.stringify({ type: 'connectedClients', clients: connectedClients });
     
@@ -22,7 +21,8 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'rover';
+    // --- THIS LINE IS THE FIX ---
+    const clientType = params.get("clientType") || 'browser'; // Default to browser
 
     console.log(`Client connected: Name=${name}, Type=${clientType}`);
 
@@ -43,18 +43,12 @@ wss.on('connection', (ws, req) => {
             const data = JSON.parse(messageAsString);
             console.log("Relaying message:", data);
 
-            // Relay messages to the correct destination
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN && client !== ws) {
                     const targetName = data.rover || ws.clientName;
                     
-                    // If message is from a rover, send to browsers watching that rover
-                    if (ws.clientType === 'rover' && client.clientType === 'browser' && client.clientName === ws.clientName) {
+                    if ((ws.clientType === 'rover' && client.clientType === 'browser' && client.clientName === ws.clientName) || (ws.clientType === 'browser' && client.clientType === 'rover' && client.clientName === targetName)) {
                          client.send(messageAsString);
-                    }
-                    // If message is from a browser, send to the target rover
-                    else if (ws.clientType === 'browser' && client.clientType === 'rover' && client.clientName === targetName) {
-                        client.send(messageAsString);
                     }
                 }
             });
