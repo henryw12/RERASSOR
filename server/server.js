@@ -1,15 +1,20 @@
 import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
 
 const PORT = process.env.PORT || 10000;
-const wss = new WebSocketServer({ port: PORT });
+const server = createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Rover WebSocket server is running.');
+});
+const wss = new WebSocketServer({ server });
 
-console.log(`Full Rover Server started on port ${PORT}`);
+console.log(`Final Rover Server started on port ${PORT}`);
 
 let connectedClients = [];
 
-// This function sends the full client list to all connected browsers
 function broadcastClientList() {
-    const message = JSON.stringify({ type: 'connectedClients', clients: connectedClients });
+    const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
+    const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
     
     wss.clients.forEach(client => {
         if (client.clientType === 'browser' && client.readyState === WebSocket.OPEN) {
@@ -24,44 +29,26 @@ wss.on('connection', (ws, req) => {
     const secret = params.get("secret");
     const clientType = params.get("clientType") || 'rover';
 
-    console.log(`Client connected: Name=${name}, Type=${clientType}`);
-
     ws.clientName = name;
     ws.clientType = clientType;
     ws.clientSecret = secret;
 
+    console.log(`Client connected: Name=${name}, Type=${clientType}`);
+
     if (clientType === 'rover' && name) {
         if (!connectedClients.some(c => c.name === name)) {
-            connectedClients.push({ name: name, secret: secret });
+            connectedClients.push({ name, secret });
         }
+        broadcastClientList();
     }
-    
-    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
-        try {
-            const data = JSON.parse(messageAsString);
-            console.log("Relaying message:", data);
-
-            // Relay messages to the correct destination
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN && client !== ws) {
-                    const targetName = data.rover || ws.clientName;
-                    
-                    // If message is from a rover, send to browsers watching that rover
-                    if (ws.clientType === 'rover' && client.clientType === 'browser' && client.clientName === ws.clientName) {
-                         client.send(messageAsString);
-                    }
-                    // If message is from a browser, send to the target rover
-                    else if (ws.clientType === 'browser' && client.clientType === 'rover' && client.clientName === targetName) {
-                        client.send(messageAsString);
-                    }
-                }
-            });
-
-        } catch (error) {
-            console.error('Error processing message:', error);
-        }
+        // Relay all messages
+        wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(messageAsString);
+            }
+        });
     });
 
     ws.on('close', () => {
@@ -72,3 +59,5 @@ wss.on('connection', (ws, req) => {
         }
     });
 });
+
+server.listen(PORT);
