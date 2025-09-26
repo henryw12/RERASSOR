@@ -34,7 +34,23 @@ export const WebSocketsProvider = ({ children }) => {
         )}&clientType=browser`
       : `wss://${myRenderHost}`;
 
+    // --- ADDED FOR DEBUGGING ---
+    console.log("Website attempting to connect to WebSocket at:", wsUrl);
+    
     const wsInstance = new WebSocket(wsUrl);
+
+    // --- ADDED FOR DEBUGGING ---
+    wsInstance.onopen = () => {
+      console.log("Website WebSocket OPENED successfully!");
+    };
+    wsInstance.onerror = (error) => {
+      console.error("Website WebSocket ERROR:", error);
+    };
+    wsInstance.onclose = () => {
+      console.log("Website WebSocket CLOSED.");
+    };
+    // --- END OF DEBUGGING ADDITIONS ---
+
     setWs(wsInstance);
 
     // Clean up: close the connection when the effect is re-run or unmounted.
@@ -51,6 +67,8 @@ export const WebSocketsProvider = ({ children }) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "connectedClients") {
+          // --- ADDED FOR DEBUGGING ---
+          console.log("Received client list from server:", data.clients);
           setClients(data.clients || []);
         }
       } catch (error) {
