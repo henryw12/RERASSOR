@@ -3,17 +3,15 @@ import { WebSocketServer } from 'ws';
 const PORT = process.env.PORT || 10000;
 const wss = new WebSocketServer({ port: PORT });
 
-console.log(`[SERVER] Rover Server started on port ${PORT}`);
+console.log(`Rover Server started on port ${PORT}`);
 
 let connectedClients = [];
 
-function broadcastClientList(action) {
-    console.log(`[SERVER] Broadcasting client list. Reason: ${action}. Current list:`, connectedClients.map(c => c.name));
+function broadcastClientList() {
     const message = JSON.stringify({ type: 'connectedClients', clients: connectedClients });
     
     wss.clients.forEach(client => {
         if (client.clientType === 'browser' && client.readyState === WebSocket.OPEN) {
-            console.log(`[SERVER] Sending list to browser client.`);
             client.send(message);
         }
     });
@@ -23,9 +21,10 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'browser';
+    // --- THIS IS THE CORRECTED LINE ---
+    const clientType = params.get("clientType") || 'rover'; // Default to rover
 
-    console.log(`[CONNECTION] New client trying to connect: Name=${name}, Type=${clientType}`);
+    console.log(`Client connected: Name=${name}, Type=${clientType}`);
 
     ws.clientName = name;
     ws.clientType = clientType;
@@ -33,26 +32,37 @@ wss.on('connection', (ws, req) => {
 
     if (clientType === 'rover' && name) {
         if (!connectedClients.some(c => c.name === name)) {
-            console.log(`[ROVER ADDED] Adding ${name} to the client list.`);
             connectedClients.push({ name: name, secret: secret });
         }
-    } else {
-        console.log(`[BROWSER CONNECTED] A browser has connected. Name: ${name || 'N/A'}`);
     }
     
-    broadcastClientList("New client connected");
+    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
-      // Message handling logic... (can be left simple for now)
-      console.log(`[MESSAGE] Received: ${messageAsString}`);
+        try {
+            const data = JSON.parse(messageAsString);
+            console.log("Relaying message:", data);
+
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN && client !== ws) {
+                    const targetName = data.rover || ws.clientName;
+                    
+                    if ((ws.clientType === 'rover' && client.clientType === 'browser' && client.clientName === ws.clientName) || (ws.clientType === 'browser' && client.clientType === 'rover' && client.clientName === targetName)) {
+                         client.send(messageAsString);
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Error processing message:', error);
+        }
     });
 
     ws.on('close', () => {
-        console.log(`[DISCONNECT] Client disconnected: ${name}`);
+        console.log(`Client disconnected: ${name}`);
         if (clientType === 'rover' && name) {
             connectedClients = connectedClients.filter(c => c.name !== name);
-            console.log(`[ROVER REMOVED] Removing ${name} from the client list.`);
-            broadcastClientList("Rover disconnected");
+            broadcastClientList();
         }
     });
 });
