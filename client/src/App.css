@@ -1,0 +1,131 @@
+/* Reset default margin and padding for the entire website */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+.streamContainer {
+  margin: 1vw;
+  overflow: hidden;
+}
+
+.videoStreamContainer {
+  margin-left: 0vw;
+  margin-right: 0vw;
+}
+
+@media (min-width: 1300px) {
+  .videoStreamContainer {
+    margin-left: calc((100vw - (100vh * 4 / 3)) / 2);
+    margin-right: calc((100vw - (100vh * 4 / 3)) / 2);
+  }
+}
+
+
+.streamImage {
+  width: 100%;
+  height: 90vh;
+  object-fit: contain;
+}
+
+.graphsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  height: 100%;
+}
+.graph1Container {
+  width: 50%; /* Adjust the width as needed */
+  height: 40vh; /* Adjust the height as needed */
+}
+.graph2Container {
+  width: 50%; /* Adjust the width as needed */
+  height: 40vh; /* Adjust the height as needed */
+}
+.graph3Container {
+  width: 50%; /* Adjust the width as needed */
+  height: 40vh; /* Adjust the height as needed */
+}
+.graph4Container {
+  width: 50%; /* Adjust the width as needed */
+  height: 40vh; /* Adjust the height as needed */
+}
+
+.about-container {
+  max-width: 800px; /* Adjust the width as needed */
+  margin: 0 auto; /* Center the container horizontally */
+  padding: 1rem; /* Add some padding */
+  text-align: left; /* Left justify the text */
+}
+
+.about-container h3 {
+  margin-top: 2rem; /* Add some space above headings */
+}
+
+.about-container p {
+  margin-bottom: 1rem; /* Add some space below paragraphs */
+}
+
+.media-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: center;
+}
+
+.media-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.media-table td {
+  padding: 10px;
+  text-align: center;
+}
+
+.media-table img {
+  border-radius: 8px;
+}
+
+.table-container {
+  max-width: 600px; /* Adjust the width as needed */
+  margin: 0 auto; /* Center the table */
+  margin-top: 2rem;
+}
+#root {
+  margin: 0 auto;
+  padding: 0rem;
+  text-align: center;
+}
+
+#connectDiv{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+#connectForm {
+  display: flex;
+  align-items: center;
+}
+
+#connectForm label {
+  margin-right: 1rem; /* Adjust the value as needed */
+}
+
+#connectButton{
+  margin-left: 1rem;
+}
+
+.controller {
+  margin-top:2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.controller Button {
+  margin-bottom: 1rem; /* Adjust the value as needed */
+}
