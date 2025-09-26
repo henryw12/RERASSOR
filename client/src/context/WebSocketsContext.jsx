@@ -1,37 +1,36 @@
-import React, { createContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useState, useEffect, useRef, useCallback } from "react";
 
 export const WebSocketsContext = createContext(null);
 
 export const WebSocketsProvider = ({ children }) => {
   const [clients, setClients] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const webSocket = useRef(null); // Use a ref to hold the WebSocket instance
+  const [connected, setConnected] = useState(null); // The rover name we are connected to
+  const [secrets, setSecrets] = useState({});
+  const ws = useRef(null);
 
-  useEffect(() => {
-    // This effect runs only once to create the connection
-    const serverUrl = "wss://rerassor.onrender.com";
-    console.log("Attempting to connect to WebSocket at:", serverUrl);
+  const connect = useCallback(() => {
+    const myRenderHost = "rerassor.onrender.com";
+    const wsUrl = connected
+      ? `wss://${myRenderHost}/?name=${encodeURIComponent(connected)}&clientType=browser`
+      : `wss://${myRenderHost}`;
 
-    const ws = new WebSocket(serverUrl);
-    webSocket.current = ws;
+    if (ws.current) {
+      ws.current.close();
+    }
 
-    ws.onopen = () => {
-      console.log("WebSocket OPENED successfully!");
-      setIsConnected(true);
-      // Ask for the client list once we are connected
-      ws.send(JSON.stringify({ type: "getConnectedClients" }));
+    console.log("Connecting to WebSocket:", wsUrl);
+    ws.current = new WebSocket(wsUrl);
+
+    ws.current.onopen = () => {
+      console.log("WebSocket OPENED!");
+      ws.current.send(JSON.stringify({ type: "getConnectedClients" }));
     };
 
-    ws.onclose = () => {
-      console.log("WebSocket CLOSED.");
-      setIsConnected(false);
-    };
-
-    ws.onmessage = (event) => {
+    ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("Received message:", data);
         if (data.type === "connectedClients") {
+          console.log("Received client list:", data.clients);
           setClients(data.clients || []);
         }
       } catch (error) {
@@ -39,30 +38,33 @@ export const WebSocketsProvider = ({ children }) => {
       }
     };
 
-    // Cleanup function
-    return () => {
-      ws.close();
+    ws.current.onclose = () => {
+      console.log("WebSocket CLOSED.");
     };
-  }, []); // The empty array ensures this effect runs only ONCE
+  }, [connected]);
 
-  // This is a simplified function to send messages
-  const sendMessage = (message) => {
-    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
-      webSocket.current.send(JSON.stringify(message));
-    }
-  };
+  useEffect(() => {
+    connect(); // Connect when the component mounts or 'connected' changes
+    
+    // Set up a poller to refresh the client list periodically
+    const intervalId = setInterval(() => {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({ type: "getConnectedClients" }));
+      }
+    }, 2000); // Ask for the list every 2 seconds
+
+    return () => {
+      clearInterval(intervalId);
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
+  }, [connect]);
   
-  // We are not using the complex context from the original project anymore,
-  // this is a simplified and more stable version.
-  const contextValue = {
-    ws: webSocket.current,
-    clients,
-    isConnected,
-    sendMessage,
-  };
+  const value = { ws: ws.current, clients, connected, setConnected, secrets, setSecrets };
 
   return (
-    <WebSocketsContext.Provider value={contextValue}>
+    <WebSocketsContext.Provider value={value}>
       {children}
     </WebSocketsContext.Provider>
   );
