@@ -1,74 +1,37 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useRef } from "react";
 
 export const WebSocketsContext = createContext(null);
 
 export const WebSocketsProvider = ({ children }) => {
-  const [connected, setConnected] = useState(null);
-  const [ws, setWs] = useState(null);
   const [clients, setClients] = useState([]);
-  const [secrets, setSecrets] = useState({});
+  const [isConnected, setIsConnected] = useState(false);
+  const webSocket = useRef(null); // Use a ref to hold the WebSocket instance
 
-  // Retrieve the persisted connected value on page load
   useEffect(() => {
-    const savedConnected = localStorage.getItem("roverName");
-    if (savedConnected) {
-      setConnected(savedConnected);
-    }
-  }, []);
+    // This effect runs only once to create the connection
+    const serverUrl = "wss://rerassor.onrender.com";
+    console.log("Attempting to connect to WebSocket at:", serverUrl);
 
-  // Persist the connected value to localStorage whenever it changes
-  useEffect(() => {
-    if (connected) {
-      localStorage.setItem("roverName", connected);
-    }
-  }, [connected]);
+    const ws = new WebSocket(serverUrl);
+    webSocket.current = ws;
 
-  // Create a single websocket instance based on "connected" state.
-  useEffect(() => {
-    // Replaced the original URL with your new Render server address
-    const myRenderHost = "rerassor.onrender.com";
-
-    const wsUrl = connected
-      ? `wss://${myRenderHost}/?name=${encodeURIComponent(
-          connected
-        )}&clientType=browser`
-      : `wss://${myRenderHost}`;
-
-    // --- ADDED FOR DEBUGGING ---
-    console.log("Website attempting to connect to WebSocket at:", wsUrl);
-    
-    const wsInstance = new WebSocket(wsUrl);
-
-    // --- ADDED FOR DEBUGGING ---
-    wsInstance.onopen = () => {
-      console.log("Website WebSocket OPENED successfully!");
+    ws.onopen = () => {
+      console.log("WebSocket OPENED successfully!");
+      setIsConnected(true);
+      // Ask for the client list once we are connected
+      ws.send(JSON.stringify({ type: "getConnectedClients" }));
     };
-    wsInstance.onerror = (error) => {
-      console.error("Website WebSocket ERROR:", error);
+
+    ws.onclose = () => {
+      console.log("WebSocket CLOSED.");
+      setIsConnected(false);
     };
-    wsInstance.onclose = () => {
-      console.log("Website WebSocket CLOSED.");
-    };
-    // --- END OF DEBUGGING ADDITIONS ---
 
-    setWs(wsInstance);
-
-    // Clean up: close the connection when the effect is re-run or unmounted.
-    return () => {
-      wsInstance.close();
-    };
-  }, [connected]);
-
-  // Handle updates for connected clients and secrets
-  useEffect(() => {
-    if (!ws) return;
-
-    const handleMessage = (event) => {
+    ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("Received message:", data);
         if (data.type === "connectedClients") {
-          // --- ADDED FOR DEBUGGING ---
-          console.log("Received client list from server:", data.clients);
           setClients(data.clients || []);
         }
       } catch (error) {
@@ -76,60 +39,30 @@ export const WebSocketsProvider = ({ children }) => {
       }
     };
 
-    const handleError = (event) => {
-      if (
-        ws.readyState === WebSocket.CLOSING ||
-        ws.readyState === WebSocket.CLOSED
-      ) {
-        return;
-      }
-      console.error("WebSocket error:", event);
-    };
-
-    ws.addEventListener("message", handleMessage);
-    ws.addEventListener("error", handleError);
-
-    const intervalId = setInterval(() => {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({ type: "getConnectedClients" }));
-      }
-    }, 1000);
-
+    // Cleanup function
     return () => {
-      ws.removeEventListener("message", handleMessage);
-      ws.removeEventListener("error", handleError);
-      clearInterval(intervalId);
+      ws.close();
     };
-  }, [ws]);
+  }, []); // The empty array ensures this effect runs only ONCE
 
-  // Clear connected if the current rover is no longer in clients
-  useEffect(() => {
-    if (connected && !clients.some((client) => client.name === connected)) {
-      setConnected(null);
+  // This is a simplified function to send messages
+  const sendMessage = (message) => {
+    if (webSocket.current && webSocket.current.readyState === WebSocket.OPEN) {
+      webSocket.current.send(JSON.stringify(message));
     }
-  }, [clients, connected]);
-
-  // On mount (or when clients update), check localStorage and pre-fill secrets
-  useEffect(() => {
-    const storedRoverName = localStorage.getItem("roverName");
-    if (storedRoverName && clients.length > 0) {
-      const roverToConnect = clients.find(
-        (client) => client.name === storedRoverName
-      );
-      if (roverToConnect) {
-        setConnected(roverToConnect.name);
-        setSecrets((prevSecrets) => ({
-          ...prevSecrets,
-          [roverToConnect.name]: roverToConnect.secret || "",
-        }));
-      }
-    }
-  }, [clients, setConnected]);
+  };
+  
+  // We are not using the complex context from the original project anymore,
+  // this is a simplified and more stable version.
+  const contextValue = {
+    ws: webSocket.current,
+    clients,
+    isConnected,
+    sendMessage,
+  };
 
   return (
-    <WebSocketsContext.Provider
-      value={{ connected, setConnected, ws, clients, secrets, setSecrets }}
-    >
+    <WebSocketsContext.Provider value={contextValue}>
       {children}
     </WebSocketsContext.Provider>
   );
