@@ -59,7 +59,8 @@ const ConnectedClients = ({
               <td>
                 <Button
                   variant="primary"
-                  // --- THIS IS THE CORRECTED LINE ---
+                  // --- THIS IS THE CORRECTED LOGIC ---
+                  // It enables the button as soon as you type anything.
                   disabled={!secrets[client.name]}
                   onClick={() => handleConnect(client)}
                   className={connected === client.name ? "btn-danger" : ""}
