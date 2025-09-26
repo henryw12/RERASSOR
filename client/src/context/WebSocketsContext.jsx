@@ -25,11 +25,15 @@ export const WebSocketsProvider = ({ children }) => {
 
   // Create a single websocket instance based on "connected" state.
   useEffect(() => {
+    // Replaced the original URL with your new Render server address
+    const myRenderHost = "rerassor.onrender.com";
+
     const wsUrl = connected
-      ? `wss://rerassor.com/?name=${encodeURIComponent(
+      ? `wss://${myRenderHost}/?name=${encodeURIComponent(
           connected
         )}&clientType=browser`
-      : "wss://rerassor.com";
+      : `wss://${myRenderHost}`;
+
     const wsInstance = new WebSocket(wsUrl);
     setWs(wsInstance);
 
