@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/esm/Button";
 import Form from "react-bootstrap/Form";
@@ -16,11 +16,11 @@ const ConnectedClients = ({
       console.log(`Disconnecting from ${client.name}`);
       setConnected(null);
       setSecrets({});
-      localStorage.removeItem("roverName"); // Remove from localStorage on disconnect
+      localStorage.removeItem("roverName");
     } else {
       console.log(`Connecting to ${client.name}`);
       setConnected(client.name);
-      localStorage.setItem("roverName", client.name); // Store in localStorage
+      localStorage.setItem("roverName", client.name);
     }
   };
 
@@ -59,7 +59,8 @@ const ConnectedClients = ({
               <td>
                 <Button
                   variant="primary"
-                  disabled={secrets[client.name] !== client.secret}
+                  // --- THIS IS THE CORRECTED LINE ---
+                  disabled={!secrets[client.name]}
                   onClick={() => handleConnect(client)}
                   className={connected === client.name ? "btn-danger" : ""}
                 >
