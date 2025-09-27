@@ -15,7 +15,7 @@ let connectedClients = [];
 function broadcastClientList() {
     const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
     const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
-
+    
     wss.clients.forEach(client => {
         if (client.clientType === 'browser' && client.readyState === WebSocket.OPEN) {
             client.send(message);
@@ -27,7 +27,7 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'rover';
+    const clientType = params.get("clientType") || 'browser'; // If no type, it's a browser
 
     ws.clientName = name;
     ws.clientType = clientType;
@@ -39,10 +39,12 @@ wss.on('connection', (ws, req) => {
         if (!connectedClients.some(c => c.name === name)) {
             connectedClients.push({ name, secret });
         }
-        broadcastClientList();
     }
+    
+    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
+        // Simple relay logic
         wss.clients.forEach(client => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(messageAsString);
