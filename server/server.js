@@ -27,7 +27,7 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'rover';
+    const clientType = params.get("clientType") || 'browser';
 
     ws.clientName = name;
     ws.clientType = clientType;
