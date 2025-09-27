@@ -51,7 +51,7 @@ export const WebSocketsProvider = ({ children }) => {
     }, 2000);
     return () => clearInterval(intervalId);
   }, [connect]);
-  
+
   const value = { ws: ws.current, clients, connected, setConnected, secrets, setSecrets };
 
   return (
