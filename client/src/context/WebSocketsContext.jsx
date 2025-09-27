@@ -1,68 +1,62 @@
-import { WebSocketServer } from 'ws';
-import { createServer } from 'http';
+import React, { createContext, useState, useEffect, useRef, useCallback } from "react";
 
-const PORT = process.env.PORT || 10000;
-const server = createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Rover WebSocket server is running.');
-});
-const wss = new WebSocketServer({ server });
+export const WebSocketsContext = createContext(null);
 
-console.log(`Final Rover Server started on port ${PORT}`);
+export const WebSocketsProvider = ({ children }) => {
+  const [clients, setClients] = useState([]);
+  const [connected, setConnected] = useState(null);
+  const [secrets, setSecrets] = useState({});
+  const ws = useRef(null);
 
-let connectedClients = [];
+  const connect = useCallback(() => {
+    // IMPORTANT: Make sure this is your Render SERVER address
+    const myRenderHost = "rerassor.onrender.com"; 
+    const wsUrl = connected
+      ? `wss://${myRenderHost}/?name=${encodeURIComponent(connected)}&clientType=browser`
+      : `wss://${myRenderHost}`;
 
-function broadcastClientList() {
-    const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
-    const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
-
-    wss.clients.forEach(client => {
-        if (client.clientType === 'browser' && client.readyState === WebSocket.OPEN) {
-            client.send(message);
-        }
-    });
-}
-
-wss.on('connection', (ws, req) => {
-    const params = new URLSearchParams(req.url.slice(1));
-    const name = params.get("name");
-    const secret = params.get("secret");
-    // This is the corrected logic for identifying clients
-    const clientType = params.get("clientType") || (name ? 'rover' : 'browser');
-
-    ws.clientName = name;
-    ws.clientType = clientType;
-    ws.clientSecret = secret;
-
-    console.log(`Client connected: Name=${name}, Type=${clientType}`);
-
-    if (clientType === 'rover' && name) {
-        if (!connectedClients.some(c => c.name === name)) {
-            connectedClients.push({ name, secret });
-        }
-        broadcastClientList();
-    } else if (clientType === 'browser') {
-        // Send the current list immediately to this new browser
-        const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
-        const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
-        ws.send(message);
+    if (ws.current) {
+      ws.current.close();
     }
 
-    ws.on('message', (messageAsString) => {
-        wss.clients.forEach(client => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(messageAsString);
-            }
-        });
-    });
+    ws.current = new WebSocket(wsUrl);
 
-    ws.on('close', () => {
-        console.log(`Client disconnected: ${name}`);
-        if (clientType === 'rover' && name) {
-            connectedClients = connectedClients.filter(c => c.name !== name);
-            broadcastClientList();
+    ws.current.onopen = () => {
+      console.log("Website WebSocket OPENED!");
+      ws.current.send(JSON.stringify({ type: "getConnectedClients" }));
+    };
+
+    ws.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "connectedClients") {
+          setClients(data.clients || []);
         }
-    });
-});
+      } catch (error) {
+        console.error("Error parsing message:", error);
+      }
+    };
 
-server.listen(PORT);
+    ws.current.onclose = () => {
+      console.log("Website WebSocket CLOSED.");
+    };
+  }, [connected]);
+
+  useEffect(() => {
+    connect();
+    const intervalId = setInterval(() => {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({ type: "getConnectedClients" }));
+      }
+    }, 2000);
+    return () => clearInterval(intervalId);
+  }, [connect]);
+  
+  const value = { ws: ws.current, clients, connected, setConnected, secrets, setSecrets };
+
+  return (
+    <WebSocketsContext.Provider value={value}>
+      {children}
+    </WebSocketsContext.Provider>
+  );
+};
