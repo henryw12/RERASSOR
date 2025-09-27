@@ -1,56 +1,68 @@
-import React, { createContext, useState, useEffect, useRef, useCallback } from "react";
+import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
 
-export const WebSocketsContext = createContext(null);
+const PORT = process.env.PORT || 10000;
+const server = createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Rover WebSocket server is running.');
+});
+const wss = new WebSocketServer({ server });
 
-export const WebSocketsProvider = ({ children }) => {
-  const [clients, setClients] = useState([]);
-  const [connected, setConnected] = useState(null);
-  const [secrets, setSecrets] = useState({});
-  const ws = useRef(null);
+console.log(`Final Rover Server started on port ${PORT}`);
 
-  const connect = useCallback(() => {
-    const myRenderHost = "rerassor.onrender.com"; // Your Render Server Address
-    const wsUrl = connected
-      ? `wss://${myRenderHost}/?name=${encodeURIComponent(connected)}&clientType=browser`
-      : `wss://${myRenderHost}`;
+let connectedClients = [];
 
-    if (ws.current) {
-      ws.current.close();
+function broadcastClientList() {
+    const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
+    const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
+
+    wss.clients.forEach(client => {
+        if (client.clientType === 'browser' && client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
+
+wss.on('connection', (ws, req) => {
+    const params = new URLSearchParams(req.url.slice(1));
+    const name = params.get("name");
+    const secret = params.get("secret");
+    // This is the corrected logic for identifying clients
+    const clientType = params.get("clientType") || (name ? 'rover' : 'browser');
+
+    ws.clientName = name;
+    ws.clientType = clientType;
+    ws.clientSecret = secret;
+
+    console.log(`Client connected: Name=${name}, Type=${clientType}`);
+
+    if (clientType === 'rover' && name) {
+        if (!connectedClients.some(c => c.name === name)) {
+            connectedClients.push({ name, secret });
+        }
+        broadcastClientList();
+    } else if (clientType === 'browser') {
+        // Send the current list immediately to this new browser
+        const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
+        const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
+        ws.send(message);
     }
 
-    ws.current = new WebSocket(wsUrl);
+    ws.on('message', (messageAsString) => {
+        wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(messageAsString);
+            }
+        });
+    });
 
-    ws.current.onopen = () => {
-      ws.current.send(JSON.stringify({ type: "getConnectedClients" }));
-    };
-
-    ws.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "connectedClients") {
-          setClients(data.clients || []);
+    ws.on('close', () => {
+        console.log(`Client disconnected: ${name}`);
+        if (clientType === 'rover' && name) {
+            connectedClients = connectedClients.filter(c => c.name !== name);
+            broadcastClientList();
         }
-      } catch (error) {
-        console.error("Error parsing message:", error);
-      }
-    };
-  }, [connected]);
+    });
+});
 
-  useEffect(() => {
-    connect();
-    const intervalId = setInterval(() => {
-      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        ws.current.send(JSON.stringify({ type: "getConnectedClients" }));
-      }
-    }, 2000);
-    return () => clearInterval(intervalId);
-  }, [connect]);
-
-  const value = { ws: ws.current, clients, connected, setConnected, secrets, setSecrets };
-
-  return (
-    <WebSocketsContext.Provider value={value}>
-      {children}
-    </WebSocketsContext.Provider>
-  );
-};
+server.listen(PORT);
