@@ -27,19 +27,26 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'browser'; // If no type, it's a browser
+    // This is the corrected logic for identifying clients
+    const clientType = params.get("clientType") || (name ? 'rover' : 'browser');
 
     ws.clientName = name;
     ws.clientType = clientType;
     ws.clientSecret = secret;
 
+    console.log(`Client connected: Name=${name}, Type=${clientType}`);
+
     if (clientType === 'rover' && name) {
         if (!connectedClients.some(c => c.name === name)) {
             connectedClients.push({ name, secret });
         }
+        broadcastClientList();
+    } else if (clientType === 'browser') {
+        // Send the current list immediately to this new browser
+        const clientList = connectedClients.map(c => ({ name: c.name, secret: c.secret }));
+        const message = JSON.stringify({ type: 'connectedClients', clients: clientList });
+        ws.send(message);
     }
-
-    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
         wss.clients.forEach(client => {
@@ -50,6 +57,7 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('close', () => {
+        console.log(`Client disconnected: ${name}`);
         if (clientType === 'rover' && name) {
             connectedClients = connectedClients.filter(c => c.name !== name);
             broadcastClientList();
