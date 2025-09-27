@@ -27,7 +27,7 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'rover'; // If no type, assume it's a rover
+    const clientType = params.get("clientType") || 'rover';
 
     ws.clientName = name;
     ws.clientType = clientType;
@@ -39,8 +39,9 @@ wss.on('connection', (ws, req) => {
         if (!connectedClients.some(c => c.name === name)) {
             connectedClients.push({ name, secret });
         }
-        broadcastClientList();
     }
+
+    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
         wss.clients.forEach(client => {
