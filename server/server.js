@@ -2,10 +2,12 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 
 const PORT = process.env.PORT || 10000;
+
 const server = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Rover WebSocket server is running.');
 });
+
 const wss = new WebSocketServer({ server });
 
 console.log(`Final Rover Server started on port ${PORT}`);
@@ -27,7 +29,8 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'browser'; // If no type, it's a browser
+    // If no type is specified, assume it's a browser (to fix the mistaken identity bug)
+    const clientType = params.get("clientType") || 'browser';
 
     ws.clientName = name;
     ws.clientType = clientType;
@@ -39,12 +42,11 @@ wss.on('connection', (ws, req) => {
         if (!connectedClients.some(c => c.name === name)) {
             connectedClients.push({ name, secret });
         }
+        broadcastClientList();
     }
-    
-    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
-        // Simple relay logic
+        // Simple relay logic for all messages
         wss.clients.forEach(client => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(messageAsString);
