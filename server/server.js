@@ -27,7 +27,8 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    const clientType = params.get("clientType") || 'browser';
+    // This is the corrected logic: If it has a name but no type, it's a rover.
+    const clientType = params.get("clientType") || (name ? 'rover' : 'browser');
 
     ws.clientName = name;
     ws.clientType = clientType;
@@ -39,9 +40,8 @@ wss.on('connection', (ws, req) => {
         if (!connectedClients.some(c => c.name === name)) {
             connectedClients.push({ name, secret });
         }
+        broadcastClientList();
     }
-
-    broadcastClientList();
 
     ws.on('message', (messageAsString) => {
         wss.clients.forEach(client => {
