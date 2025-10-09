@@ -55,12 +55,5 @@ wss.on('connection', (ws, req) => {
         }
     });
 });
-ws.on('message', (messageAsString) => {
-    console.log(`Message from ${ws.clientName}: ${messageAsString}`);
-    wss.clients.forEach(client => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(messageAsString);
-        }
-    });
-});
+
 server.listen(PORT);
