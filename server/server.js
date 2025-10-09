@@ -1,7 +1,7 @@
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 443;
 const server = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Rover WebSocket server is running.');
@@ -55,5 +55,12 @@ wss.on('connection', (ws, req) => {
         }
     });
 });
-
+ws.on('message', (messageAsString) => {
+    console.log(`Message from ${ws.clientName}: ${messageAsString}`);
+    wss.clients.forEach(client => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(messageAsString);
+        }
+    });
+});
 server.listen(PORT);
