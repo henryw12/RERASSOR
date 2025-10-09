@@ -33,8 +33,6 @@ wss.on('connection', (ws, req) => {
     ws.clientType = clientType;
     ws.clientSecret = secret;
 
-    console.log(`Client connected: Name=${name}, Type=${clientType}`);
-
     if (clientType === 'rover' && name) {
         if (!connectedClients.some(c => c.name === name)) {
             connectedClients.push({ name, secret });
@@ -53,7 +51,6 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('close', () => {
-        console.log(`Client disconnected: ${name}`);
         if (clientType === 'rover' && name) {
             connectedClients = connectedClients.filter(c => c.name !== name);
             broadcastClientList();
