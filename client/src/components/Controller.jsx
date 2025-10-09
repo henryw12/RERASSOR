@@ -2,75 +2,21 @@ import React from "react";
 import Button from "react-bootstrap/Button";
 
 function Controller({ connected, ws }) {
-  const handleForward = () => {
-    ws.send(
-      JSON.stringify({ rover: connected, type: "move", direction: "forward" })
-    );
+  const sendCommand = (direction) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "move", direction }));
+    }
   };
 
-  const handleStop = () => {
-    ws.send(
-      JSON.stringify({ rover: connected, type: "move", direction: "stop" })
-    );
-  };
-
-  const handleBackward = () => {
-    ws.send(
-      JSON.stringify({ rover: connected, type: "move", direction: "backward" })
-    );
-  };
-
-  const handleLeft = () => {
-    ws.send(
-      JSON.stringify({ rover: connected, type: "move", direction: "left" })
-    );
-  };
-
-  const handleRight = () => {
-    ws.send(
-      JSON.stringify({ rover: connected, type: "move", direction: "right" })
-    );
-  };
-
-  const handleForwardLeft = () => {
-    ws.send(
-      JSON.stringify({
-        rover: connected,
-        type: "move",
-        direction: "forwardLeft",
-      })
-    );
-  };
-
-  const handleForwardRight = () => {
-    ws.send(
-      JSON.stringify({
-        rover: connected,
-        type: "move",
-        direction: "forwardRight",
-      })
-    );
-  };
-
-  const handleBackwardLeft = () => {
-    ws.send(
-      JSON.stringify({
-        rover: connected,
-        type: "move",
-        direction: "backwardLeft",
-      })
-    );
-  };
-
-  const handleBackwardRight = () => {
-    ws.send(
-      JSON.stringify({
-        rover: connected,
-        type: "move",
-        direction: "backwardRight",
-      })
-    );
-  };
+  const handleForward = () => sendCommand("forward");
+  const handleStop = () => sendCommand("stop");
+  const handleBackward = () => sendCommand("backward");
+  const handleLeft = () => sendCommand("left");
+  const handleRight = () => sendCommand("right");
+  const handleForwardLeft = () => sendCommand("forwardLeft");
+  const handleForwardRight = () => sendCommand("forwardRight");
+  const handleBackwardLeft = () => sendCommand("backwardLeft");
+  const handleBackwardRight = () => sendCommand("backwardRight");
 
   return (
     <div className="controller">
@@ -92,15 +38,9 @@ function Controller({ connected, ws }) {
         </Button>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
-        {/* <Button onClick={handleLeft} disabled={!connected}>
-          <i className="fa-solid fa-arrow-left"></i>
-        </Button> */}
         <Button onClick={handleStop} disabled={!connected} variant="danger">
           <i className="fa-solid fa-stop"></i>
         </Button>
-        {/* <Button onClick={handleRight} disabled={!connected}>
-          <i className="fa-solid fa-arrow-right"></i>
-        </Button> */}
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
         <Button onClick={handleBackwardLeft} disabled={!connected}>
