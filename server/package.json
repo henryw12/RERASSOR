@@ -4,10 +4,6 @@
   "description": "Rover WebSocket Server",
   "main": "server.js",
   "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "ws": "^8.18.0"
-  }
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "ws": "^8.18.0" }
 }
