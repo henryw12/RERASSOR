@@ -27,7 +27,6 @@ wss.on('connection', (ws, req) => {
     const params = new URLSearchParams(req.url.slice(1));
     const name = params.get("name");
     const secret = params.get("secret");
-    // This is the corrected logic: If it has a name, it's a rover. Otherwise, it's a browser.
     const clientType = params.get("clientType") || (name ? 'rover' : 'browser');
 
     ws.clientName = name;
@@ -42,12 +41,10 @@ wss.on('connection', (ws, req) => {
         }
         broadcastClientList();
     } else if (clientType === 'browser') {
-        // Send the current list immediately to this new browser
         broadcastClientList();
     }
 
     ws.on('message', (messageAsString) => {
-        // Relay all messages to all other clients
         wss.clients.forEach(client => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(messageAsString);
