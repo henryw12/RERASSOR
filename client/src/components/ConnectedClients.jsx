@@ -12,10 +12,15 @@ const ConnectedClients = ({
   setSecrets,
 }) => {
   const handleConnect = (client) => {
+    // Check if the entered secret is correct before connecting
+    if (secrets[client.name] !== client.secret) {
+      alert("Incorrect secret!");
+      return;
+    }
+
     if (connected === client.name) {
       console.log(`Disconnecting from ${client.name}`);
       setConnected(null);
-      setSecrets({});
       localStorage.removeItem("roverName");
     } else {
       console.log(`Connecting to ${client.name}`);
@@ -43,33 +48,36 @@ const ConnectedClients = ({
           </tr>
         </thead>
         <tbody>
-          {clients.map((client, index) => (
-            <tr key={index}>
-              <td>{client.name}</td>
-              <td>
-                <Form.Control
-                  type="password"
-                  placeholder="Enter secret"
-                  value={secrets[client.name] || ""}
-                  onChange={(e) =>
-                    handleSecretChange(client.name, e.target.value)
-                  }
-                />
-              </td>
-              <td>
-                <Button
-                  variant="primary"
-                  // --- THIS IS THE CORRECTED LOGIC ---
-                  // It enables the button as soon as you type anything.
-                  disabled={!secrets[client.name]}
-                  onClick={() => handleConnect(client)}
-                  className={connected === client.name ? "btn-danger" : ""}
-                >
-                  {connected === client.name ? "Disconnect" : "Connect"}
-                </Button>
-              </td>
+          {clients.length > 0 ? (
+            clients.map((client, index) => (
+              <tr key={index}>
+                <td>{client.name}</td>
+                <td>
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter secret"
+                    value={secrets[client.name] || ""}
+                    onChange={(e) =>
+                      handleSecretChange(client.name, e.target.value)
+                    }
+                  />
+                </td>
+                <td>
+                  <Button
+                    variant="primary"
+                    onClick={() => handleConnect(client)}
+                    className={connected === client.name ? "btn-danger" : ""}
+                  >
+                    {connected === client.name ? "Disconnect" : "Connect"}
+                  </Button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="3">No rovers currently online.</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </Table>
     </div>
