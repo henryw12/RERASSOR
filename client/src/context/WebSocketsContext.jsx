@@ -26,10 +26,10 @@ export const WebSocketsProvider = ({ children }) => {
   // Create a single websocket instance based on "connected" state.
   useEffect(() => {
     const wsUrl = connected
-      ? `wss://rerassor.com/?name=${encodeURIComponent(
+      ? `ws://140.82.27.153:3000/?name=${encodeURIComponent(
           connected
         )}&clientType=browser`
-      : "wss://rerassor.com";
+      : "ws://140.82.27.153:3000";
     const wsInstance = new WebSocket(wsUrl);
     setWs(wsInstance);
 
